@@ -56,13 +56,6 @@ class Security {
     public static boolean verifyPurchase(String productId, String base64PublicKey, String signedData, String signature) {
         if (TextUtils.isEmpty(signedData) || TextUtils.isEmpty(base64PublicKey) ||
                 TextUtils.isEmpty(signature)) {
-
-            if(BuildConfig.DEBUG){
-                //handle test purchase not having signature
-                if(productId.equals("android.test.purchased")) {
-                    return true;
-                }
-            }
             Log.e(TAG, "Purchase verification failed: missing data.");
             return false;
         }
