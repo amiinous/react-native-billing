@@ -21,6 +21,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Bundle;
@@ -111,8 +112,12 @@ public class BillingProcessor extends BillingBase {
 
 	private void bindPlayServices() {
 		try {
-			Intent iapIntent = new Intent(BuildConfig.IAB_INTENT);
-			iapIntent.setPackage(BuildConfig.IAB_PACKAGE);
+			ApplicationInfo applicationInfo = getContext().getPackageManager().getApplicationInfo(getContext().getPackageName(), PackageManager.GET_META_DATA);
+			Bundle bundle = applicationInfo.metaData;
+			String iabIntent = bundle.getString("iab_intent");
+			String iabPackage = bundle.getString("iab_package");
+			Intent iapIntent = new Intent(iabIntent);
+			iapIntent.setPackage(iabPackage);
 			getContext().bindService(iapIntent, serviceConnection, Context.BIND_AUTO_CREATE);
 		} catch (Exception e) {
 			Log.e(LOG_TAG, "error in bindPlayServices", e);
