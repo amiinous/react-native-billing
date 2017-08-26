@@ -111,8 +111,8 @@ public class BillingProcessor extends BillingBase {
 
 	private void bindPlayServices() {
 		try {
-			Intent iapIntent = new Intent("ir.cafebazaar.pardakht.InAppBillingService.BIND");
-			iapIntent.setPackage("com.farsitel.bazaar");
+			Intent iapIntent = new Intent(BuildConfig.IAB_INTENT);
+			iapIntent.setPackage(BuildConfig.IAB_PACKAGE);
 			getContext().bindService(iapIntent, serviceConnection, Context.BIND_AUTO_CREATE);
 		} catch (Exception e) {
 			Log.e(LOG_TAG, "error in bindPlayServices", e);
