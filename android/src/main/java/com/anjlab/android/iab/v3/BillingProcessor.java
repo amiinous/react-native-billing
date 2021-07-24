@@ -528,9 +528,18 @@ public class BillingProcessor extends BillingBase {
 	}
 
 	public static boolean isIabServiceAvailable(Context context) {
-		final PackageManager packageManager = context.getPackageManager();
-		final Intent intent = new Intent("ir.cafebazaar.pardakht.InAppBillingService.BIND");
-		List<ResolveInfo> list = packageManager.queryIntentServices(intent, 0);
-		return list.size() > 0;
+		try {
+			final PackageManager packageManager = context.getPackageManager();
+			ApplicationInfo applicationInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
+			Bundle bundle = applicationInfo.metaData;
+			String iabIntent = bundle.getString("iab_intent");
+			final Intent intent = new Intent(iabIntent);
+			List<ResolveInfo> list = packageManager.queryIntentServices(intent, 0);
+			return list.size() > 0;
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "error in checking IAB availability", e);
+			return false;
+		}
+
 	}
 }
