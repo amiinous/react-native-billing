@@ -448,6 +448,7 @@ public class BillingProcessor extends BillingBase {
 			return false;
 		if (data == null) {
 			Log.e(LOG_TAG, "handleActivityResult: data is null!");
+			eventHandler.onBillingError(Constants.BILLING_ERROR_OTHER_ERROR, null);
 			return false;
 		}
 		int responseCode = data.getIntExtra(Constants.RESPONSE_CODE, Constants.BILLING_RESPONSE_RESULT_OK);
