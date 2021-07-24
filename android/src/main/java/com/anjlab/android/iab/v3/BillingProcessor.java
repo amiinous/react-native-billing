@@ -67,6 +67,9 @@ public class BillingProcessor extends BillingBase {
 	private static final String SUBSCRIPTIONS_CACHE_KEY = ".subscriptions.cache" + SETTINGS_VERSION;
 	private static final String PURCHASE_PAYLOAD_CACHE_KEY = ".purchase.last" + SETTINGS_VERSION;
 
+	// Keys for the response from getPurchaseConfig
+	private static final String INTENT_V2_SUPPORT = "INTENT_V2_SUPPORT";
+
 	private IInAppBillingService billingService;
 	private String contextPackageName;
 	private String signatureBase64;
@@ -274,20 +277,41 @@ public class BillingProcessor extends BillingBase {
 				purchasePayload += ":" + developerPayload;
 			}
 			savePurchasePayload(purchasePayload);
+			Bundle configBundle = billingService.getPurchaseConfig(Constants.GOOGLE_API_VERSION);
 			Bundle bundle;
-			if (oldProductIds != null && purchaseType.equals(Constants.PRODUCT_TYPE_SUBSCRIPTION))
-				bundle = billingService.getBuyIntentToReplaceSkus(Constants.GOOGLE_API_SUBSCRIPTION_CHANGE_VERSION, contextPackageName, oldProductIds, productId, purchaseType, purchasePayload);
-			else
+
+			if(configBundle.getBoolean(INTENT_V2_SUPPORT)) {
+				bundle = billingService.getBuyIntentV2(Constants.GOOGLE_API_VERSION, contextPackageName, productId, purchaseType, purchasePayload );
+			} else {
 				bundle = billingService.getBuyIntent(Constants.GOOGLE_API_VERSION, contextPackageName, productId, purchaseType, purchasePayload);
+			}
+
+			// In our react-native-billing module oldProducts is always null
+//			if (oldProductIds != null && purchaseType.equals(Constants.PRODUCT_TYPE_SUBSCRIPTION))
+//				bundle = billingService.getBuyIntentToReplaceSkus(Constants.GOOGLE_API_SUBSCRIPTION_CHANGE_VERSION, contextPackageName, oldProductIds, productId, purchaseType, purchasePayload);
+//			else
+//				bundle = billingService.getBuyIntent(Constants.GOOGLE_API_VERSION, contextPackageName, productId, purchaseType, purchasePayload);
 
 			if (bundle != null) {
 				int response = bundle.getInt(Constants.RESPONSE_CODE);
 				if (response == Constants.BILLING_RESPONSE_RESULT_OK) {
-					PendingIntent pendingIntent = bundle.getParcelable(Constants.BUY_INTENT);
-					if (activity != null && pendingIntent != null)
-						activity.startIntentSenderForResult(pendingIntent.getIntentSender(), PURCHASE_FLOW_REQUEST_CODE, new Intent(), 0, 0, 0);
-					else if (eventHandler != null)
-						eventHandler.onBillingError(Constants.BILLING_ERROR_LOST_CONTEXT, null);
+					if (activity != null) {
+						if(configBundle.getBoolean(INTENT_V2_SUPPORT)) {
+							Intent intent = bundle.getParcelable(Constants.BUY_INTENT);
+							if(intent != null) {
+								activity.startActivityForResult(intent, PURCHASE_FLOW_REQUEST_CODE);
+							} else if (eventHandler != null)
+								eventHandler.onBillingError(Constants.BILLING_ERROR_LOST_CONTEXT, null);
+						} else {
+							PendingIntent pendingIntent = bundle.getParcelable(Constants.BUY_INTENT);
+							if(pendingIntent != null) {
+								activity.startIntentSenderForResult(pendingIntent.getIntentSender(), PURCHASE_FLOW_REQUEST_CODE, new Intent(), 0, 0, 0);
+							} else if (eventHandler != null)
+								eventHandler.onBillingError(Constants.BILLING_ERROR_LOST_CONTEXT, null);
+
+						}
+					}
+
 				} else if (response == Constants.BILLING_RESPONSE_RESULT_ITEM_ALREADY_OWNED) {
 					if (!isPurchased(productId) && !isSubscribed(productId))
 						loadOwnedPurchasesFromGoogle();
@@ -305,7 +329,8 @@ public class BillingProcessor extends BillingBase {
 					}
 				} else if (eventHandler != null)
 					eventHandler.onBillingError(Constants.BILLING_ERROR_FAILED_TO_INITIALIZE_PURCHASE, null);
-			}
+			} else if (eventHandler != null)
+				eventHandler.onBillingError(Constants.BILLING_ERROR_FAILED_TO_INITIALIZE_PURCHASE, null);
 			return true;
 		} catch (Exception e) {
 			Log.e(LOG_TAG, "Error in purchase", e);
